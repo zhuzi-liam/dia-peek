@@ -183,7 +183,7 @@
     root.innerHTML = `<style>${STYLE}</style><div class="backdrop"></div>`;
     document.documentElement.appendChild(host);
     const backdrop = root.querySelector('.backdrop');
-    backdrop.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200 });
+    backdrop.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 110 });
     backdrop.addEventListener('click', () => send({ type: 'peek:window-close' }));
     windowBackdrop = host;
 
@@ -585,7 +585,7 @@
     panel.animate(
       [{ transform: 'scale(.55)', opacity: 0 }, { transform: 'scale(1)', opacity: 1 }],
       { duration: 280, easing: 'cubic-bezier(.2,.9,.25,1.05)' });
-    backdrop.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200 });
+    backdrop.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 110 });
 
     setLocation(url, '');
     // Framing headers are stripped only once the background has installed its rule.
@@ -611,7 +611,7 @@
         if (prevFocus instanceof HTMLElement) prevFocus.focus({ preventScroll: true });
       };
       if (!animate) { finish(); return; }
-      backdrop.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, fill: 'forwards' });
+      backdrop.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 90, fill: 'forwards' });
       panel.animate(
         [{ transform: 'scale(1)', opacity: 1 }, { transform: 'scale(.92)', opacity: 0 }],
         { duration: 160, easing: 'ease-in', fill: 'forwards' }).finished.then(finish);
