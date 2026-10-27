@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Dia Peek",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "按住 Shift 点击链接，在当前页面上方弹出悬浮预览窗（还原 Arc 的 Peek）。",
   "permissions": [
     "declarativeNetRequest",

@@ -567,8 +567,13 @@
     dialog.addEventListener('cancel', (e) => { e.preventDefault(); close(); });
 
     const prevFocus = document.activeElement;
-    const prevOverflow = document.documentElement.style.overflow;
-    document.documentElement.style.overflow = 'hidden';
+    // Lock scrolling behind the peek. Where the page shows a classic scrollbar (e.g. a
+    // Mac with a mouse attached), keep its space reserved; otherwise the page would
+    // widen when the scrollbar goes and look like it was resizing behind the backdrop.
+    const rootStyle = document.documentElement.style;
+    const prevOverflow = rootStyle.overflow, prevGutter = rootStyle.scrollbarGutter;
+    if (innerWidth > document.documentElement.clientWidth) rootStyle.scrollbarGutter = 'stable';
+    rootStyle.overflow = 'hidden';
     addEventListener('keydown', onKey, true);
     addEventListener('message', onMessage);
     addEventListener('pagehide', onPageHide);
@@ -603,7 +608,8 @@
       removeEventListener('keydown', onKey, true);
       removeEventListener('message', onMessage);
       removeEventListener('pagehide', onPageHide);
-      document.documentElement.style.overflow = prevOverflow;
+      rootStyle.overflow = prevOverflow;
+      rootStyle.scrollbarGutter = prevGutter;
       if (revoke) send({ type: 'peek:close' });
       const finish = () => {
         dialog.close();
