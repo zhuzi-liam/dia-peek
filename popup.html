@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <style>
+    :root { color-scheme: light dark; --fg: #1d1d1f; --muted: #6e6e73; --line: rgba(0,0,0,.08); --accent: #4f7cff; }
+    @media (prefers-color-scheme: dark) { :root { --fg: #f2f2f4; --muted: #a1a1a8; --line: rgba(255,255,255,.1); } }
+    body { margin: 0; width: 260px; padding: 14px 16px; font: 13px/1.45 -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; color: var(--fg); }
+    h1 { margin: 0 0 2px; font-size: 14px; }
+    p { margin: 0 0 12px; color: var(--muted); }
+    label { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-top: 1px solid var(--line); }
+    select { font: inherit; }
+    input[type=checkbox] { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }
+  </style>
+</head>
+<body>
+  <h1>Dia Peek</h1>
+  <p><span id="hint">按住 Shift</span> 点击链接，在悬浮窗中预览。Esc 或点击空白处关闭。</p>
+  <label>启用 <input type="checkbox" id="enabled"></label>
+  <label>触发键
+    <select id="modifier">
+      <option value="shift">Shift + 点击</option>
+      <option value="alt">Option + 点击</option>
+    </select>
+  </label>
+  <script src="popup.js"></script>
+</body>
+</html>
