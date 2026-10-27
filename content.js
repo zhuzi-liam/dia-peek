@@ -308,6 +308,7 @@
     copy: '<path d="M6.8 9.2a2.8 2.8 0 0 0 4 0l2-2a2.8 2.8 0 0 0-4-4l-.6.6M9.2 6.8a2.8 2.8 0 0 0-4 0l-2 2a2.8 2.8 0 0 0 4 4l.6-.6"/>',
     open: '<path d="M9.5 2.5h4v4M13.5 2.5 8 8M11.5 9.5v3a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h3"/>',
     close: '<path d="m4 4 8 8M12 4l-8 8"/>',
+    expand: '<path d="M9.5 2.5h4v4M13.5 2.5 9 7M6.5 13.5h-4v-4M2.5 13.5 7 9"/>',
   };
   const icon = (name) =>
     `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]}</svg>`;
@@ -336,13 +337,29 @@
       position: absolute; inset: 0; background: rgba(10,10,14,.24);
       backdrop-filter: blur(8px) saturate(1.15); -webkit-backdrop-filter: blur(8px) saturate(1.15);
     }
+    dialog { --px: max(56px, calc((100vw - 1240px) / 2)); --py: 40px; }
     .panel {
-      position: absolute; inset: 40px max(56px, calc((100vw - 1240px) / 2));
+      position: absolute; inset: var(--py) var(--px);
       display: flex; flex-direction: column; overflow: hidden;
       background: var(--bg); border-radius: 14px;
       box-shadow: 0 0 0 .5px rgba(0,0,0,.2), 0 24px 80px rgba(0,0,0,.35), 0 4px 16px rgba(0,0,0,.18);
     }
-    @media (max-width: 720px) { .panel { inset: 12px; border-radius: 12px; } }
+    /* Arc's controls: round buttons just outside the panel's top-right corner. */
+    .rail {
+      position: absolute; top: var(--py); left: calc(100vw - var(--px) + 10px);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .rail button {
+      width: 32px; height: 32px; border-radius: 50%; color: var(--fg); background: var(--bg);
+      box-shadow: 0 0 0 .5px rgba(0,0,0,.18), 0 4px 14px rgba(0,0,0,.22);
+    }
+    .rail button:hover { background: var(--bg); color: var(--accent); }
+    /* No room beside the panel on narrow windows: line the buttons up above it. */
+    @media (max-width: 720px) {
+      dialog { --px: 12px; --py: 52px; }
+      .panel { border-radius: 12px; }
+      .rail { top: 12px; left: auto; right: 12px; flex-direction: row; }
+    }
     .bar {
       flex: none; height: 40px; display: flex; align-items: center; gap: 2px;
       padding: 0 6px 0 14px; background: var(--bar); border-bottom: 1px solid var(--line);
@@ -403,8 +420,6 @@
             <div class="site"><span class="host"></span><span class="title"></span></div>
             <button data-act="reload" title="重新加载">${icon('reload')}</button>
             <button data-act="copy" title="复制链接 (⌘⇧C)">${icon('copy')}</button>
-            <button data-act="open" title="在新标签页打开 (⌘↩)">${icon('open')}</button>
-            <button data-act="close" title="关闭 (Esc)">${icon('close')}</button>
           </div>
           <div class="body">
             <div class="progress"></div>
@@ -413,10 +428,14 @@
             <div class="chip toast">已复制链接</div>
           </div>
         </div>
+        <div class="rail">
+          <button data-act="close" title="关闭 (Esc)" aria-label="关闭">${icon('close')}</button>
+          <button data-act="open" title="在标签页中打开 (⌘↩)" aria-label="在标签页中打开">${icon('expand')}</button>
+        </div>
       </dialog>`;
 
     const $ = (sel) => root.querySelector(sel);
-    const dialog = $('dialog'), panel = $('.panel'), backdrop = $('.backdrop'), body = $('.body');
+    const dialog = $('dialog'), panel = $('.panel'), backdrop = $('.backdrop'), body = $('.body'), rail = $('.rail');
     const iframe = $('iframe'), hint = $('.hint'), toast = $('.toast');
     const token = crypto.randomUUID();
     let currentUrl = url, reported = false;
@@ -591,6 +610,7 @@
       [{ transform: 'scale(.55)', opacity: 0 }, { transform: 'scale(1)', opacity: 1 }],
       { duration: 280, easing: 'cubic-bezier(.2,.9,.25,1.05)' });
     backdrop.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 110 });
+    rail.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, delay: 80, fill: 'backwards' });
 
     setLocation(url, '');
     // Framing headers are stripped only once the background has installed its rule.
@@ -618,6 +638,7 @@
       };
       if (!animate) { finish(); return; }
       backdrop.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 90, fill: 'forwards' });
+      rail.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 90, fill: 'forwards' });
       panel.animate(
         [{ transform: 'scale(1)', opacity: 1 }, { transform: 'scale(.92)', opacity: 0 }],
         { duration: 160, easing: 'ease-in', fill: 'forwards' }).finished.then(finish);
