@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
   "name": "Dia Peek",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "按住 Shift 点击链接，在当前页面上方弹出悬浮预览窗（还原 Arc 的 Peek）。",
   "permissions": [
     "declarativeNetRequest",
     "storage",
     "contextMenus",
-    "scripting"
+    "scripting",
+    "webNavigation"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -25,7 +26,8 @@
       ],
       "all_frames": true,
       "run_at": "document_start",
-      "world": "MAIN"
+      "world": "MAIN",
+      "match_origin_as_fallback": true
     },
     {
       "matches": [
@@ -35,7 +37,8 @@
         "content.js"
       ],
       "all_frames": true,
-      "run_at": "document_start"
+      "run_at": "document_start",
+      "match_origin_as_fallback": true
     }
   ],
   "action": {

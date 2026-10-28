@@ -72,6 +72,9 @@
 
   function noteIntent(e) {
     if (!e.isTrusted || !settings.enabled || !matchesModifier(e) || !extensionAlive()) return;
+    // The background hears of it too, once per click: if a new window or tab still
+    // opens (from a frame or realm the shim doesn't reach), it folds it into a peek.
+    if (!intentFresh() || performance.now() - intent.at > 300) send({ type: 'peek:intent' });
     intent = { at: performance.now(), x: e.clientX, y: e.clientY };
     document.dispatchEvent(new CustomEvent('diapeek:intent')); // tells main-world.js
   }
@@ -129,7 +132,7 @@
   let lastPointer = null;
   addEventListener('contextmenu', (e) => { lastPointer = [e.clientX, e.clientY]; }, true);
 
-  chrome.runtime.onMessage.addListener((msg) => {
+  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg.type === 'peek:hovered') {
       const url = hovered?.isConnected && hovered.matches(':hover') && peekableUrl(hovered);
       if (!url) return;
@@ -142,6 +145,7 @@
     } else if (isTop && msg.type === 'peek:show') {
       const [x, y] = msg.fromMenu && lastPointer ? lastPointer : [];
       openPeek(msg.url, x, y);
+      sendResponse(true);
     } else if (isTop && msg.type === 'peek:window-closed') {
       closeWindowBackdrop();
     }

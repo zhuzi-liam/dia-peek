@@ -104,6 +104,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     case 'peek:verify':
       verifyToken(tab.id, msg.token).then(sendResponse, () => sendResponse(false));
       return true;
+    case 'peek:intent':
+      intents.set(tab.id, Date.now());
+      break;
     case 'peek:relay':
       // A modifier-click inside a sub-frame: let the top frame show the peek.
       chrome.tabs.sendMessage(tab.id, { type: 'peek:show', url: msg.url }, { frameId: 0 }).catch(() => {});
@@ -156,13 +159,63 @@ chrome.runtime.onInstalled.addListener(() => {
 // page is reloaded. Inject the current scripts instead.
 async function attachToOpenTabs() {
   const tabs = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] });
-  await Promise.all(tabs.map(async (tab) => {
-    const target = { tabId: tab.id, allFrames: true };
-    try {
-      await chrome.scripting.executeScript({ target, files: ['main-world.js'], world: 'MAIN' });
-      await chrome.scripting.executeScript({ target, files: ['content.js'] });
-    } catch {} // pages extensions may not touch (e.g. the Chrome Web Store)
-  }));
+  await Promise.all(tabs.map((tab) => attach(tab.id)));
+}
+
+async function attach(tabId) {
+  const target = { tabId, allFrames: true };
+  try {
+    await chrome.scripting.executeScript({ target, files: ['main-world.js'], world: 'MAIN' });
+    await chrome.scripting.executeScript({ target, files: ['content.js'] });
+  } catch {} // pages extensions may not touch (e.g. the Chrome Web Store)
+}
+
+// Dia puts background tabs to sleep, and a sleeping tab can miss the injection above.
+// Check again whenever a tab comes to the front.
+chrome.tabs.onActivated.addListener(async ({ tabId }) => {
+  try {
+    const [{ result }] = await chrome.scripting.executeScript({
+      target: { tabId }, func: () => Boolean(window.__diaPeekAlive?.()),
+    });
+    if (!result) await attach(tabId);
+  } catch {}
+});
+
+// Last line of defence. Some apps open links in ways the content scripts can't catch
+// (window.open borrowed from a fresh iframe, a click on a detached <a>, a frame the
+// scripts never reached), and Chrome then opens a new window or tab. If that happens
+// right after a real modifier-click, close it and show the link as a peek instead.
+const INTENT_MS = 1500;
+const intents = new Map(); // tab id → time of its last modifier-click
+
+chrome.webNavigation.onCreatedNavigationTarget.addListener(async ({ sourceTabId, tabId, url }) => {
+  const at = intents.get(sourceTabId);
+  if (!at || Date.now() - at > INTENT_MS) return;
+  intents.delete(sourceTabId);
+  // Sized popups (sign-in, payment) open as popup windows; leave those alone.
+  const tab = await chrome.tabs.get(tabId).catch(() => null);
+  const win = tab && await chrome.windows.get(tab.windowId).catch(() => null);
+  if (win?.type !== 'normal') return;
+  if (!/^https?:/.test(url)) url = await nextNavigation(tabId); // window.open() then assign
+  if (!/^https?:/.test(url || '')) return;
+  // Links into the page itself (href="#…") keep their normal behaviour, as in content.js.
+  const source = await chrome.tabs.get(sourceTabId).catch(() => null);
+  if (source?.url?.split('#')[0] === url.split('#')[0]) return;
+  const shown = await chrome.tabs.sendMessage(sourceTabId, { type: 'peek:show', url }, { frameId: 0 }).catch(() => false);
+  if (shown) chrome.tabs.remove(tabId).catch(() => {});
+});
+
+function nextNavigation(tabId) {
+  return new Promise((resolve) => {
+    const done = (url) => {
+      chrome.webNavigation.onBeforeNavigate.removeListener(listener);
+      clearTimeout(timer);
+      resolve(url);
+    };
+    const listener = (d) => { if (d.tabId === tabId && d.frameId === 0) done(d.url); };
+    const timer = setTimeout(() => done(null), 2000);
+    chrome.webNavigation.onBeforeNavigate.addListener(listener);
+  });
 }
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
